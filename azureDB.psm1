@@ -8,7 +8,7 @@ process{
                 "Authorization" = $authHeader;
                 'Accept' = 'application/json'}
 
-
+    # get subscriptions and services from them
     $sub = Get-AzureSubscription
 
     $h = $sub.SubscriptionId | Invoke-Parallel { Invoke-RestMethod -uri https://management.core.windows.net/$_/services/hostedservices -Method GET -Headers $headers }
@@ -17,17 +17,17 @@ process{
     $h.HostedServices.HostedService | skip-null| invoke-parallel {
         #declare function inside of the script block
         function xmlToObject {
-    param($o)
-    $h = @{}
-    $o  | gm -MemberType Property | % {
-        $prop = $_.name
-        if ($o."$prop" -is 'System.Xml.XmlElement') {
-            $h[$prop] = xmlToObject $o."$prop"
+        param($o)
+        $h = @{}
+        $o  | gm -MemberType Property | % {
+            $prop = $_.name
+            if ($o."$prop" -is 'System.Xml.XmlElement') {
+                $h[$prop] = xmlToObject $o."$prop"
+            }
+            else { $h[$prop] = $o."$prop" }
         }
-        else { $h[$prop] = $o."$prop" }
-    }
-    $h
-    }
+        $h
+        }
         try {
             $curr = $_
             $subId = ([uri]$curr.Url).Segments[1] -replace "\/",""
